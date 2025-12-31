@@ -27,6 +27,10 @@ First, install the Modal CLI and authenticate:
 pip install modal
 modal setup  # This will open browser for authentication
 ```
+after you do `modal setup` go to this link and [create](https://modal.com/settings) a new token by going to  Create proxy auth tokens :
+
+<img width="743" height="367" alt="image" src="https://github.com/user-attachments/assets/b20e1b12-d8e6-42b4-bd53-125a3d8d195d" />
+
 
 Then deploy the executor to your Modal account:
 
@@ -34,25 +38,33 @@ Then deploy the executor to your Modal account:
 modal deploy modal_executor.py
 ```
 
+after you run above command you'll see someting like this for the first time.
+
+<img width="738" height="376" alt="image" src="https://github.com/user-attachments/assets/0b771fcf-885f-4d28-be1c-e094b45b7776" />
+
 After deployment, you'll see your endpoint URL:
 ```
 https://<your-workspace>--kernelide-executor-api.modal.run
 ```
 
-### 3. Run the Frontend
+### 3. Then , Run the Frontend
 
 ```bash
 npm run dev
 ```
 
-Open http://localhost:5173 in your browser.
+Open http://localhost:5173 in your browser, and you will see the KernelIDE like this.
+
+<img width="2930" height="1496" alt="image" src="https://github.com/user-attachments/assets/86d52a9e-ffd8-4386-a126-2a3c964b1431" />
 
 ### 4. Configure the IDE
 
 1. Click **Settings** in the top-right
-2. Enter your Modal API credentials (from https://modal.com/settings)
-3. Paste your deployed endpoint URL
-4. Click **Verify** to confirm the connection
+2. Enter your [Modal API credentials](https://modal.com/settings)
+3. Paste your deployed endpoint URL it should look like this `https://<your-workspace>--kernelide-executor-api.modal.run`
+4. Click **Deploy Executoir** to confirm the connection. after you do this, the screen should look like this in below image.
+   <img width="2924" height="1486" alt="image" src="https://github.com/user-attachments/assets/7b3fe28d-ab11-47a4-a839-9db9fb680085" />
+
 
 ## Usage
 
@@ -61,6 +73,8 @@ Open http://localhost:5173 in your browser.
 3. Choose your GPU and timeout in Settings
 4. Click **Run** or press `Cmd/Ctrl + Enter`
 5. View output and execution time in the right panel
+<img width="2922" height="1502" alt="image" src="https://github.com/user-attachments/assets/320ba2d7-4901-4da9-b3e0-51e26ec8525d" />
+
 
 ## Supported Languages
 
@@ -88,22 +102,7 @@ Open http://localhost:5173 in your browser.
 
 *Prices are approximate and per-second billing applies.*
 
-## Tech Stack
-
-**Frontend:**
-- React 18 + TypeScript
-- Vite
-- Monaco Editor (@monaco-editor/react)
-- Lucide React (icons)
-
-**Backend (Modal):**
-- CUDA 12.9 + Python 3.12
-- PyTorch, Triton, cuda-python
-- nvidia-cutlass-dsl
-- CUTLASS 3.7 (for C++ CUTLASS)
-- FastAPI web endpoint
-
-## Development
+## Contributing/Development
 
 ```bash
 # Install dependencies
