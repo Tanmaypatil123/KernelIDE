@@ -38,7 +38,7 @@ Then deploy the executor to your Modal account:
 modal deploy modal_executor.py
 ```
 
-after you run above command you'll see someting like this for the first time.
+After you run above command you'll see someting like this for the first time.
 
 <img width="738" height="376" alt="image" src="https://github.com/user-attachments/assets/0b771fcf-885f-4d28-be1c-e094b45b7776" />
 
@@ -61,9 +61,9 @@ Open http://localhost:5173 in your browser, and you will see the KernelIDE like 
 
 1. Click **Settings** in the top-right
 2. Enter your [Modal API credentials](https://modal.com/settings)
-3. Paste your deployed endpoint URL it should look like this `https://<your-workspace>--kernelide-executor-api.modal.run`
-4. Click **Deploy Executoir** to confirm the connection. after you do this, the screen should look like this in below image.
+3. Click **Deploy Executoir** and paste your deployed endpoint URL it should look like this `https://<your-workspace>--kernelide-executor-api.modal.run` to confirm the connection. after you do this, the screen should look like this in below image.
    <img width="2924" height="1486" alt="image" src="https://github.com/user-attachments/assets/7b3fe28d-ab11-47a4-a839-9db9fb680085" />
+4.Click on save settings and close the settings popup.
 
 
 ## Usage
