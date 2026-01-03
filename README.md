@@ -92,7 +92,7 @@ Download and install the pre-built extension:
 curl -L -o kernelide.vsix https://github.com/Tanmaypatil123/KernelIDE/releases/download/vscode-extension-v1/kernelide-0.1.0.vsix
 
 # Install the extension
-code --install-extension kernelide.vsix
+code --install-extension kernelide-0.1.0.vsix
 ```
 
 After installation, restart VS Code and follow the setup instructions in the [VSCode Extension README](kernelide-vscode/README.md) for complete installation and usage details.
