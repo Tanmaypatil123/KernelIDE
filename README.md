@@ -10,6 +10,7 @@ A browser-based IDE for practicing GPU kernel development with serverless execut
 - **Configurable Timeout** - Set execution limits (5-300 seconds)
 - **Serverless Execution** - No idle charges, pay only for kernel runtime
 - **Self-Hostable** - Bring your own Modal API key
+- **VSCode Extension** - Use KernelIDE directly within Visual Studio Code
 
 ## Quick Start
 
@@ -56,11 +57,31 @@ Open http://localhost:5173 in your browser.
 
 ## Usage
 
+### Web IDE
+
 1. Select a language from the dropdown (CUDA, Triton, CUTLASS, CUTE DSL, Mojo)
 2. Write your kernel code in the editor
 3. Choose your GPU and timeout in Settings
 4. Click **Run** or press `Cmd/Ctrl + Enter`
 5. View output and execution time in the right panel
+
+### VSCode Extension
+
+The KernelIDE VSCode extension provides the same GPU kernel development experience directly in your editor.
+
+**Installation:**
+
+Download and install the pre-built extension:
+
+```bash
+# Download the extension
+curl -L -o kernelide.vsix https://github.com/Tanmaypatil123/KernelIDE/releases/download/vscode-extension-v1/kernelide-0.1.0.vsix
+
+# Install the extension
+code --install-extension kernelide.vsix
+```
+
+After installation, restart VS Code and follow the setup instructions in the [VSCode Extension README](kernelide-vscode/README.md) for complete installation and usage details.
 
 ## Supported Languages
 
