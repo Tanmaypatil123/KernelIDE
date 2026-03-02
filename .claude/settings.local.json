@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:github.com)",
+      "Bash(npx tsc:*)",
+      "Bash(npx vite build)",
+      "Bash(npm run compile:*)",
+      "Bash(npm install:*)",
+      "Bash(npx @vscode/vsce package:*)",
+      "Bash(code --install-extension:*)"
+    ]
+  }
+}

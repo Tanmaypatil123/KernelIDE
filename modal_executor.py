@@ -43,6 +43,18 @@ cutlass_image = (
     .env({"CUTLASS_PATH": "/opt/cutlass"})
 )
 
+# Image with cuTile (cuda-tile) for tile-based GPU programming
+cutile_image = (
+    modal.Image.from_registry("nvidia/cuda:13.1.0-devel-ubuntu24.04", add_python="3.12")
+    .apt_install("build-essential", "git", "wget", "cmake", "ninja-build")
+    .pip_install(
+        "cuda-tile",
+        "cupy-cuda12x",
+        "numpy>=2.0.0",
+        "pydantic>=2.0.0",
+    )
+)
+
 # Image with Mojo SDK
 mojo_image = (
     modal.Image.from_registry("nvidia/cuda:12.9.0-devel-ubuntu24.04", add_python="3.12")
@@ -415,6 +427,49 @@ def _execute_mojo(code: str, timeout_seconds: int = 30):
             }
 
 
+@app.function(
+    image=cutile_image,
+    gpu="B200",
+    timeout=300,
+    memory=65536,
+)
+def execute_cutile_b200(code: str, timeout_seconds: int = 30):
+    return _execute_cutile(code, timeout_seconds)
+
+
+def _execute_cutile(code: str, timeout_seconds: int = 30):
+    """Execute cuTile Python code."""
+    start_time = time.time()
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        source_file = os.path.join(tmpdir, "kernel.py")
+
+        with open(source_file, "w") as f:
+            f.write(code)
+
+        try:
+            result = subprocess.run(
+                [sys.executable, source_file],
+                capture_output=True,
+                text=True,
+                timeout=timeout_seconds,
+                cwd=tmpdir,
+            )
+            return {
+                "success": result.returncode == 0,
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "execution_time": time.time() - start_time,
+            }
+        except subprocess.TimeoutExpired:
+            return {
+                "success": False,
+                "stdout": "",
+                "stderr": f"Execution timed out after {timeout_seconds} seconds",
+                "execution_time": timeout_seconds,
+            }
+
+
 def create_web_app():
     """Create FastAPI web app - imported lazily to avoid import on GPU workers."""
     from fastapi import FastAPI, HTTPException
@@ -484,6 +539,10 @@ def create_web_app():
             ("mojo", "a100"): execute_mojo_a100,
             ("mojo", "h100"): execute_mojo_h100,
             ("mojo", "b200"): execute_mojo_b200,
+            ("cutile", "t4"): execute_cutile_b200,  # cuTile requires Blackwell GPU (B200)
+            ("cutile", "a100"): execute_cutile_b200,
+            ("cutile", "h100"): execute_cutile_b200,
+            ("cutile", "b200"): execute_cutile_b200,
         }
         
         executor = executors.get((lang, gpu_tier))
@@ -527,7 +586,7 @@ def create_web_app():
                 "/execute": "POST - Execute GPU code",
                 "/health": "GET - Health check",
             },
-            "supported_languages": ["cuda", "triton", "cutlass", "cutedsl", "mojo"],
+            "supported_languages": ["cuda", "triton", "cutlass", "cutedsl", "mojo", "cutile"],
             "supported_gpus": ["T4", "L4", "A10", "A100-40GB", "A100-80GB", "L40S", "H100", "H200", "B200"],
         }
 

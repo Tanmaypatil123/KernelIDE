@@ -4,8 +4,8 @@ import { Editor } from './components/Editor';
 import { OutputPanel } from './components/OutputPanel';
 import { SettingsModal } from './components/SettingsModal';
 import type { Language, Settings, ExecutionResult } from './types';
-import { loadSettings, saveSettings, defaultCode, getStoredEndpoint, setStoredEndpoint } from './store';
-import { executeCode, checkDeployment } from './services/modal';
+import { loadSettings, saveSettings, defaultCode, getStoredEndpoint, setStoredEndpoint, clearStoredEndpoint } from './store';
+import { executeCode, verifyEndpoint } from './services/modal';
 
 function App() {
   const [language, setLanguage] = useState<Language>('cuda');
@@ -14,43 +14,40 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [result, setResult] = useState<ExecutionResult | null>(null);
-  const [deploymentStatus, setDeploymentStatus] = useState<
-    'idle' | 'checking' | 'deploying' | 'deployed' | 'error'
-  >('idle');
-  const [deploymentError, setDeploymentError] = useState<string>();
   const [endpoint, setEndpoint] = useState<string | null>(getStoredEndpoint);
+  const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'checking' | 'connected'>('disconnected');
 
-  // Check if API is configured
-  const isConfigured = Boolean(settings.apiKey && settings.apiSecret && endpoint);
+  const isConfigured = Boolean(endpoint) && connectionStatus === 'connected';
 
-  // Show settings on first load if not configured
+  const checkConnection = useCallback(async (url: string) => {
+    setConnectionStatus('checking');
+    const ok = await verifyEndpoint(url);
+    setConnectionStatus(ok ? 'connected' : 'disconnected');
+    return ok;
+  }, []);
+
+  // Verify stored endpoint on load
   useEffect(() => {
-    if (!settings.apiKey || !settings.apiSecret) {
-      setShowSettings(true);
-    } else if (endpoint) {
-      // Check if deployment is still valid
-      checkDeploymentStatus();
+    if (endpoint) {
+      checkConnection(endpoint);
     }
   }, []);
 
-  const checkDeploymentStatus = useCallback(async () => {
-    if (!settings.apiKey || !settings.apiSecret) return;
-
-    setDeploymentStatus('checking');
-    const result = await checkDeployment(settings);
-
-    if (result.deployed && result.endpoint) {
-      setDeploymentStatus('deployed');
-      setEndpoint(result.endpoint);
-      setStoredEndpoint(result.endpoint);
-    } else {
-      setDeploymentStatus('idle');
+  const handleEndpointChange = async (newEndpoint: string) => {
+    const trimmed = newEndpoint.trim().replace(/\/+$/, ''); // trim trailing slashes
+    if (!trimmed) {
+      setEndpoint(null);
+      clearStoredEndpoint();
+      setConnectionStatus('disconnected');
+      return;
     }
-  }, [settings]);
+    setEndpoint(trimmed);
+    setStoredEndpoint(trimmed);
+    await checkConnection(trimmed);
+  };
 
   const handleLanguageChange = (lang: Language) => {
     setLanguage(lang);
-    // Load default code for the language if current code is default
     if (code === defaultCode[language]) {
       setCode(defaultCode[lang]);
     }
@@ -61,25 +58,13 @@ function App() {
     saveSettings(newSettings);
   };
 
-  const handleDeploy = async () => {
-    setDeploymentStatus('deploying');
-    setDeploymentError(undefined);
-
-    // For now, show manual deployment instructions
-    // In a full implementation, this would use Modal's API or a backend service
-    setDeploymentStatus('error');
-    setDeploymentError(
-      'Please deploy manually using Modal CLI. Save the executor code and run: modal deploy executor.py'
-    );
-  };
-
   const handleRun = async () => {
     if (!endpoint) {
       setResult({
         success: false,
         stdout: '',
         stderr: '',
-        error: 'No endpoint configured. Please deploy the executor first.',
+        error: 'No endpoint configured. Paste your Modal endpoint URL in the header.',
       });
       return;
     }
@@ -102,7 +87,7 @@ function App() {
     }
   };
 
-  // Keyboard shortcut for running code
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
@@ -127,14 +112,6 @@ function App() {
     saveSettings(newSettings);
   };
 
-  const handleEndpointChange = (newEndpoint: string) => {
-    setEndpoint(newEndpoint);
-    if (newEndpoint) {
-      setStoredEndpoint(newEndpoint);
-      checkDeploymentStatus();
-    }
-  };
-
   return (
     <>
       <Header
@@ -148,7 +125,7 @@ function App() {
         onGpuChange={handleGpuChange}
         endpoint={endpoint}
         onEndpointChange={handleEndpointChange}
-        deploymentStatus={deploymentStatus}
+        connectionStatus={connectionStatus}
       />
 
       <main
@@ -179,9 +156,9 @@ function App() {
         }}
       >
         <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-          <span style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
+          <span style={{
+            display: 'flex',
+            alignItems: 'center',
             gap: '6px',
             padding: '4px 10px',
             background: 'var(--bg-tertiary)',
@@ -195,16 +172,16 @@ function App() {
         </div>
         <div style={{ display: 'flex', gap: '16px', color: 'var(--text-secondary)' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <kbd style={{ 
-              padding: '2px 6px', 
-              background: 'var(--bg-tertiary)', 
+            <kbd style={{
+              padding: '2px 6px',
+              background: 'var(--bg-tertiary)',
               borderRadius: '4px',
               border: '1px solid var(--border-color)',
               fontSize: '11px',
-            }}>⌘</kbd>
-            <kbd style={{ 
-              padding: '2px 6px', 
-              background: 'var(--bg-tertiary)', 
+            }}>Ctrl</kbd>
+            <kbd style={{
+              padding: '2px 6px',
+              background: 'var(--bg-tertiary)',
               borderRadius: '4px',
               border: '1px solid var(--border-color)',
               fontSize: '11px',
@@ -212,16 +189,16 @@ function App() {
             <span style={{ marginLeft: '4px' }}>Run</span>
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <kbd style={{ 
-              padding: '2px 6px', 
-              background: 'var(--bg-tertiary)', 
+            <kbd style={{
+              padding: '2px 6px',
+              background: 'var(--bg-tertiary)',
               borderRadius: '4px',
               border: '1px solid var(--border-color)',
               fontSize: '11px',
-            }}>⌘</kbd>
-            <kbd style={{ 
-              padding: '2px 6px', 
-              background: 'var(--bg-tertiary)', 
+            }}>Ctrl</kbd>
+            <kbd style={{
+              padding: '2px 6px',
+              background: 'var(--bg-tertiary)',
               borderRadius: '4px',
               border: '1px solid var(--border-color)',
               fontSize: '11px',
@@ -236,60 +213,10 @@ function App() {
         onClose={() => setShowSettings(false)}
         settings={settings}
         onSave={handleSettingsSave}
-        deploymentStatus={deploymentStatus}
-        deploymentError={deploymentError}
-        onDeploy={handleDeploy}
+        endpoint={endpoint}
+        onEndpointChange={handleEndpointChange}
+        connectionStatus={connectionStatus}
       />
-
-      {/* Manual Endpoint Input Modal - shown when deployment fails */}
-      {deploymentStatus === 'error' && showSettings && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: '20px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            background: 'var(--bg-tertiary)',
-            border: '1px solid var(--border-color)',
-            borderRadius: '8px',
-            padding: '16px 20px',
-            maxWidth: '600px',
-            zIndex: 1001,
-          }}
-        >
-          <h4 style={{ marginBottom: '12px', color: 'var(--text-primary)' }}>
-            Manual Endpoint Configuration
-          </h4>
-          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
-            After deploying with Modal CLI, enter your endpoint URL:
-          </p>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <input
-              className="input"
-              type="text"
-              placeholder="https://your-workspace--kernelide-executor-api.modal.run"
-              value={endpoint || ''}
-              onChange={(e) => {
-                setEndpoint(e.target.value);
-                if (e.target.value) {
-                  setStoredEndpoint(e.target.value);
-                }
-              }}
-              style={{ flex: 1 }}
-            />
-            <button
-              className="btn-primary"
-              onClick={() => {
-                if (endpoint) {
-                  checkDeploymentStatus();
-                }
-              }}
-            >
-              Verify
-            </button>
-          </div>
-        </div>
-      )}
     </>
   );
 }

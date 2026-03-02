@@ -22,7 +22,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
         webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
 
-        webviewView.webview.onDidReceiveMessage(async (data) => {
+        webviewView.webview.onDidReceiveMessage(async (data: any) => {
             switch (data.type) {
                 case 'saveSettings': {
                     const config = vscode.workspace.getConfiguration('kernelide');
@@ -81,7 +81,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 type: 'output',
                 success: false,
                 stdout: '',
-                stderr: 'Error: Modal endpoint not configured. Please set your Modal.com endpoint URL in settings.',
+                stderr: 'Error: Modal endpoint not configured. Paste your endpoint URL above and click Connect.',
                 executionTime: 0,
             });
             return;
@@ -205,9 +205,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             background: var(--vscode-button-background);
             color: var(--vscode-button-foreground);
         }
-        .btn-secondary {
-            background: var(--vscode-button-secondaryBackground);
-            color: var(--vscode-button-secondaryForeground);
+        .btn-connect {
+            background: #3b82f6;
+            color: white;
             margin-top: 4px;
         }
         .btn-run {
@@ -250,12 +250,35 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             background: var(--vscode-panel-border);
             margin: 12px 0;
         }
-        .connected {
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+        .status-connected {
             color: #22c55e;
+            background: rgba(34, 197, 94, 0.1);
         }
-        .disconnected {
+        .status-disconnected {
             color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
         }
+        .status-none {
+            color: #f59e0b;
+            background: rgba(245, 158, 11, 0.1);
+        }
+        .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .dot-green { background: #22c55e; }
+        .dot-red { background: #ef4444; }
+        .dot-yellow { background: #f59e0b; }
         .loader {
             display: inline-block;
             width: 12px;
@@ -274,15 +297,16 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     <div class="section">
         <div class="section-title">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="3"/>
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
             </svg>
-            Modal Configuration
+            Connect to Modal
         </div>
         <label>Endpoint URL</label>
         <input type="text" id="endpoint" placeholder="https://your-workspace--kernelide-executor-api.modal.run">
+        <button class="btn-connect" id="connectBtn">Connect</button>
         <div class="status-bar">
-            <span id="connection-status" class="disconnected">Not connected</span>
+            <span id="connection-status" class="status-badge status-none"><span class="dot dot-yellow"></span> Not connected</span>
         </div>
     </div>
 
@@ -315,6 +339,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             <option value="triton">Triton (Python)</option>
             <option value="cutlass">CUTLASS</option>
             <option value="cutedsl">CUTE DSL</option>
+            <option value="cutile">cuTile (Python)</option>
             <option value="mojo">Mojo</option>
         </select>
 
@@ -324,7 +349,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
     <button class="btn-primary" id="saveBtn">Save Settings</button>
     <button class="btn-run" id="runBtn">
-        <span id="runBtnText">▶ Run Kernel (⌘⇧K)</span>
+        <span id="runBtnText">&#9654; Run Kernel</span>
     </button>
 
     <div class="divider"></div>
@@ -352,6 +377,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         const languageSelect = document.getElementById('language');
         const timeoutInput = document.getElementById('timeout');
         const saveBtn = document.getElementById('saveBtn');
+        const connectBtn = document.getElementById('connectBtn');
         const runBtn = document.getElementById('runBtn');
         const runBtnText = document.getElementById('runBtnText');
         const output = document.getElementById('output');
@@ -361,15 +387,58 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
         vscode.postMessage({ type: 'getSettings' });
 
-        saveBtn.addEventListener('click', () => {
+        // Connect button - saves endpoint and verifies
+        connectBtn.addEventListener('click', () => {
+            const url = endpointInput.value.trim().replace(/\\/+$/, '');
+            if (!url) {
+                connectionStatus.className = 'status-badge status-none';
+                connectionStatus.innerHTML = '<span class="dot dot-yellow"></span> Enter a URL';
+                return;
+            }
+
+            connectionStatus.className = 'status-badge status-none';
+            connectionStatus.innerHTML = '<span class="loader"></span> Verifying...';
+
+            // Save immediately
             vscode.postMessage({
                 type: 'saveSettings',
-                endpoint: endpointInput.value,
+                endpoint: url,
                 gpu: gpuSelect.value,
                 language: languageSelect.value,
                 timeout: parseInt(timeoutInput.value) || 30,
             });
-            updateConnectionStatus();
+
+            // Verify via health check
+            fetch(url + '/health')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.app === 'kernelide-executor') {
+                        connectionStatus.className = 'status-badge status-connected';
+                        connectionStatus.innerHTML = '<span class="dot dot-green"></span> Connected';
+                    } else {
+                        connectionStatus.className = 'status-badge status-disconnected';
+                        connectionStatus.innerHTML = '<span class="dot dot-red"></span> Invalid endpoint';
+                    }
+                })
+                .catch(() => {
+                    connectionStatus.className = 'status-badge status-disconnected';
+                    connectionStatus.innerHTML = '<span class="dot dot-red"></span> Could not connect';
+                });
+        });
+
+        // Enter key to connect
+        endpointInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') connectBtn.click();
+        });
+
+        saveBtn.addEventListener('click', () => {
+            vscode.postMessage({
+                type: 'saveSettings',
+                endpoint: endpointInput.value.trim().replace(/\\/+$/, ''),
+                gpu: gpuSelect.value,
+                language: languageSelect.value,
+                timeout: parseInt(timeoutInput.value) || 30,
+            });
         });
 
         runBtn.addEventListener('click', () => {
@@ -381,16 +450,6 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             });
         });
 
-        function updateConnectionStatus() {
-            if (endpointInput.value) {
-                connectionStatus.textContent = 'Configured';
-                connectionStatus.className = 'connected';
-            } else {
-                connectionStatus.textContent = 'Not configured';
-                connectionStatus.className = 'disconnected';
-            }
-        }
-
         window.addEventListener('message', event => {
             const message = event.data;
             switch (message.type) {
@@ -399,7 +458,26 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     gpuSelect.value = message.gpu || 'T4';
                     languageSelect.value = message.language || 'cuda';
                     timeoutInput.value = message.timeout || 30;
-                    updateConnectionStatus();
+                    // Auto-verify if endpoint exists
+                    if (message.endpoint) {
+                        connectionStatus.className = 'status-badge status-none';
+                        connectionStatus.innerHTML = '<span class="loader"></span> Verifying...';
+                        fetch(message.endpoint + '/health')
+                            .then(r => r.json())
+                            .then(data => {
+                                if (data.app === 'kernelide-executor') {
+                                    connectionStatus.className = 'status-badge status-connected';
+                                    connectionStatus.innerHTML = '<span class="dot dot-green"></span> Connected';
+                                } else {
+                                    connectionStatus.className = 'status-badge status-disconnected';
+                                    connectionStatus.innerHTML = '<span class="dot dot-red"></span> Invalid endpoint';
+                                }
+                            })
+                            .catch(() => {
+                                connectionStatus.className = 'status-badge status-disconnected';
+                                connectionStatus.innerHTML = '<span class="dot dot-red"></span> Could not connect';
+                            });
+                    }
                     break;
                 case 'running':
                     runBtn.disabled = true;
@@ -412,16 +490,16 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     break;
                 case 'output':
                     runBtn.disabled = false;
-                    runBtnText.textContent = '▶ Run Kernel (⌘⇧K)';
+                    runBtnText.innerHTML = '&#9654; Run Kernel';
                     if (message.success) {
                         output.textContent = message.stdout || '(No output)';
                         output.className = 'output-container output-success';
-                        execStatus.textContent = '✓ Success';
+                        execStatus.textContent = 'Success';
                         execStatus.className = 'output-success';
                     } else {
                         output.textContent = message.stderr || message.stdout || 'Unknown error';
                         output.className = 'output-container output-error';
-                        execStatus.textContent = '✗ Failed';
+                        execStatus.textContent = 'Failed';
                         execStatus.className = 'output-error';
                     }
                     if (message.executionTime) {
@@ -430,7 +508,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     break;
                 case 'error':
                     runBtn.disabled = false;
-                    runBtnText.textContent = '▶ Run Kernel (⌘⇧K)';
+                    runBtnText.innerHTML = '&#9654; Run Kernel';
                     output.textContent = message.message;
                     output.className = 'output-container output-error';
                     break;

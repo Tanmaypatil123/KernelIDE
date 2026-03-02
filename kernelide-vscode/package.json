@@ -1,7 +1,7 @@
 {
   "name": "kernelide",
   "displayName": "KernelIDE",
-  "description": "GPU Kernel Development with Modal.com - Execute CUDA, Triton, CUTLASS, and Mojo kernels on cloud GPUs",
+  "description": "GPU Kernel Development with Modal.com - Execute CUDA, Triton, CUTLASS, cuTile, and Mojo kernels on cloud GPUs",
   "version": "0.1.0",
   "publisher": "kernelide",
   "repository": {
@@ -64,7 +64,7 @@
         "kernelide.defaultLanguage": {
           "type": "string",
           "default": "cuda",
-          "enum": ["cuda", "triton", "cutlass", "cutedsl", "mojo"],
+          "enum": ["cuda", "triton", "cutlass", "cutedsl", "cutile", "mojo"],
           "description": "Default kernel language/DSL"
         },
         "kernelide.timeout": {

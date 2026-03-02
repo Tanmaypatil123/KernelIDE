@@ -1,10 +1,8 @@
-export type Language = 'cuda' | 'triton' | 'mojo' | 'cutlass' | 'cutedsl';
+export type Language = 'cuda' | 'triton' | 'mojo' | 'cutlass' | 'cutedsl' | 'cutile';
 
 export type GPUType = 'T4' | 'L4' | 'A10' | 'A100-40GB' | 'A100-80GB' | 'L40S' | 'H100' | 'H200' | 'B200';
 
 export interface Settings {
-  apiKey: string;
-  apiSecret: string;
   gpu: GPUType;
   timeout: number;
 }
@@ -45,4 +43,5 @@ export const LANGUAGE_OPTIONS: { value: Language; label: string; extension: stri
   { value: 'cutlass', label: 'CUTLASS C++', extension: '.cu' },
   { value: 'cutedsl', label: 'CUTE DSL (Python)', extension: '.py' },
   { value: 'mojo', label: 'Mojo', extension: '.mojo' },
+  { value: 'cutile', label: 'cuTile (Python)', extension: '.py' },
 ];

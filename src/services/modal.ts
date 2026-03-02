@@ -1,45 +1,20 @@
 import type { Settings, Language, ExecutionResult } from '../types';
 
-const MODAL_APP_NAME = 'kernelide-executor';
-
-export async function checkDeployment(_settings: Settings): Promise<{ deployed: boolean; endpoint?: string }> {
-  const endpoint = getEndpointUrl();
-  
-  if (!endpoint) {
-    return { deployed: false };
-  }
-
+export async function verifyEndpoint(endpoint: string): Promise<boolean> {
   try {
     const response = await fetch(`${endpoint}/health`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      signal: AbortSignal.timeout(5000),
     });
-    
+
     if (response.ok) {
       const data = await response.json();
-      if (data.app === 'kernelide-executor') {
-        return { deployed: true, endpoint };
-      }
+      return data.app === 'kernelide-executor';
     }
   } catch {
-    // Endpoint doesn't exist or isn't accessible
+    // Endpoint unreachable
   }
-  
-  return { deployed: false };
-}
-
-function getEndpointUrl(): string | null {
-  const stored = localStorage.getItem('kernelide_endpoint');
-  return stored;
-}
-
-export async function deployToModal(_settings: Settings): Promise<{ success: boolean; endpoint?: string; error?: string }> {
-  return {
-    success: false,
-    error: 'Automatic deployment requires Modal CLI. Please deploy manually using: modal deploy modal_executor.py',
-  };
+  return false;
 }
 
 export async function executeCode(
@@ -88,5 +63,3 @@ export async function executeCode(
     };
   }
 }
-
-export { MODAL_APP_NAME };

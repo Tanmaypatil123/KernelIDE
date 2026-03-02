@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Eye, EyeOff, CheckCircle, AlertCircle, Loader2, ExternalLink } from 'lucide-react';
+import { X, CheckCircle, AlertCircle, Loader2, ExternalLink } from 'lucide-react';
 import type { Settings, GPUType } from '../types';
 import { GPU_OPTIONS } from '../types';
 
@@ -8,9 +8,9 @@ interface SettingsModalProps {
   onClose: () => void;
   settings: Settings;
   onSave: (settings: Settings) => void;
-  deploymentStatus: 'idle' | 'checking' | 'deploying' | 'deployed' | 'error';
-  deploymentError?: string;
-  onDeploy: () => void;
+  endpoint: string | null;
+  onEndpointChange: (endpoint: string) => void;
+  connectionStatus: 'disconnected' | 'checking' | 'connected';
 }
 
 export function SettingsModal({
@@ -18,30 +18,27 @@ export function SettingsModal({
   onClose,
   settings,
   onSave,
-  deploymentStatus,
-  deploymentError,
-  onDeploy,
+  endpoint,
+  onEndpointChange,
+  connectionStatus,
 }: SettingsModalProps) {
   const [localSettings, setLocalSettings] = useState<Settings>(settings);
-  const [showApiKey, setShowApiKey] = useState(false);
-  const [showApiSecret, setShowApiSecret] = useState(false);
+  const [localEndpoint, setLocalEndpoint] = useState(endpoint || '');
 
   useEffect(() => {
     setLocalSettings(settings);
-  }, [settings]);
+    setLocalEndpoint(endpoint || '');
+  }, [settings, endpoint]);
 
   if (!isOpen) return null;
 
   const handleSave = () => {
     onSave(localSettings);
+    if (localEndpoint !== (endpoint || '')) {
+      onEndpointChange(localEndpoint);
+    }
+    onClose();
   };
-
-  const handleDeployAndSave = () => {
-    onSave(localSettings);
-    onDeploy();
-  };
-
-  const isConfigured = localSettings.apiKey && localSettings.apiSecret;
 
   return (
     <div
@@ -88,209 +85,69 @@ export function SettingsModal({
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {/* Modal API Credentials */}
+          {/* Endpoint Configuration */}
           <section>
-            <h3
-              style={{
-                fontSize: '14px',
-                fontWeight: 600,
-                marginBottom: '12px',
-                color: 'var(--text-secondary)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
-              }}
-            >
-              Modal.com Credentials
+            <h3 style={sectionTitleStyle}>
+              Modal Endpoint
             </h3>
-            <p
-              style={{
-                fontSize: '13px',
-                color: 'var(--text-muted)',
-                marginBottom: '12px',
-              }}
-            >
-              Get your API credentials from{' '}
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+              Deploy with <code style={codeStyle}>modal deploy modal_executor.py</code> then paste the URL below.{' '}
               <a
                 href="https://modal.com/settings"
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{ color: 'var(--accent)', textDecoration: 'none' }}
               >
-                modal.com/settings <ExternalLink size={12} style={{ display: 'inline' }} />
+                modal.com <ExternalLink size={11} style={{ display: 'inline' }} />
               </a>
             </p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div>
-                <label
-                  style={{
-                    fontSize: '13px',
-                    color: 'var(--text-secondary)',
-                    display: 'block',
-                    marginBottom: '6px',
-                  }}
-                >
-                  API Key (Token ID)
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    className="input"
-                    type={showApiKey ? 'text' : 'password'}
-                    value={localSettings.apiKey}
-                    onChange={(e) =>
-                      setLocalSettings({ ...localSettings, apiKey: e.target.value })
-                    }
-                    placeholder="ak-..."
-                    style={{ paddingRight: '40px' }}
-                  />
-                  <button
-                    onClick={() => setShowApiKey(!showApiKey)}
-                    style={{
-                      position: 'absolute',
-                      right: '8px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      background: 'none',
-                      color: 'var(--text-muted)',
-                      padding: '4px',
-                    }}
-                  >
-                    {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label
-                  style={{
-                    fontSize: '13px',
-                    color: 'var(--text-secondary)',
-                    display: 'block',
-                    marginBottom: '6px',
-                  }}
-                >
-                  API Secret (Token Secret)
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    className="input"
-                    type={showApiSecret ? 'text' : 'password'}
-                    value={localSettings.apiSecret}
-                    onChange={(e) =>
-                      setLocalSettings({ ...localSettings, apiSecret: e.target.value })
-                    }
-                    placeholder="as-..."
-                    style={{ paddingRight: '40px' }}
-                  />
-                  <button
-                    onClick={() => setShowApiSecret(!showApiSecret)}
-                    style={{
-                      position: 'absolute',
-                      right: '8px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      background: 'none',
-                      color: 'var(--text-muted)',
-                      padding: '4px',
-                    }}
-                  >
-                    {showApiSecret ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Deployment Status */}
-          <section>
-            <h3
-              style={{
-                fontSize: '14px',
-                fontWeight: 600,
-                marginBottom: '12px',
-                color: 'var(--text-secondary)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
-              }}
-            >
-              Deployment Status
-            </h3>
+            <input
+              className="input"
+              type="text"
+              placeholder="https://your-workspace--kernelide-executor-api.modal.run"
+              value={localEndpoint}
+              onChange={(e) => setLocalEndpoint(e.target.value)}
+              style={{ marginBottom: '8px' }}
+            />
 
             <div
               style={{
-                padding: '12px',
+                padding: '10px 12px',
                 background: 'var(--bg-tertiary)',
                 borderRadius: '6px',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '12px',
+                gap: '10px',
+                fontSize: '13px',
               }}
             >
-              {deploymentStatus === 'idle' && (
+              {connectionStatus === 'connected' && (
                 <>
-                  <AlertCircle size={20} color="var(--warning)" />
+                  <CheckCircle size={16} color="var(--success)" />
+                  <span style={{ color: 'var(--success)' }}>Connected and ready</span>
+                </>
+              )}
+              {connectionStatus === 'checking' && (
+                <>
+                  <Loader2 size={16} color="var(--accent)" className="spin" />
+                  <span>Verifying endpoint...</span>
+                </>
+              )}
+              {connectionStatus === 'disconnected' && (
+                <>
+                  <AlertCircle size={16} color={endpoint ? 'var(--error)' : 'var(--warning)'} />
                   <span style={{ color: 'var(--text-secondary)' }}>
-                    Not deployed. Click "Deploy" to set up the executor on your Modal account.
-                  </span>
-                </>
-              )}
-              {deploymentStatus === 'checking' && (
-                <>
-                  <Loader2 size={20} color="var(--accent)" className="spin" />
-                  <span>Checking deployment status...</span>
-                </>
-              )}
-              {deploymentStatus === 'deploying' && (
-                <>
-                  <Loader2 size={20} color="var(--accent)" className="spin" />
-                  <span>Deploying executor to Modal...</span>
-                </>
-              )}
-              {deploymentStatus === 'deployed' && (
-                <>
-                  <CheckCircle size={20} color="var(--success)" />
-                  <span style={{ color: 'var(--success)' }}>
-                    Deployed and ready!
-                  </span>
-                </>
-              )}
-              {deploymentStatus === 'error' && (
-                <>
-                  <AlertCircle size={20} color="var(--error)" />
-                  <span style={{ color: 'var(--error)' }}>
-                    {deploymentError || 'Deployment failed'}
+                    {endpoint ? 'Could not connect to endpoint' : 'No endpoint configured'}
                   </span>
                 </>
               )}
             </div>
-
-            {isConfigured && deploymentStatus !== 'deployed' && (
-              <button
-                className="btn-primary"
-                onClick={handleDeployAndSave}
-                disabled={deploymentStatus === 'deploying' || deploymentStatus === 'checking'}
-                style={{ marginTop: '12px', width: '100%' }}
-              >
-                {deploymentStatus === 'deploying' ? 'Deploying...' : 'Deploy Executor'}
-              </button>
-            )}
           </section>
 
           {/* GPU Selection */}
           <section>
-            <h3
-              style={{
-                fontSize: '14px',
-                fontWeight: 600,
-                marginBottom: '12px',
-                color: 'var(--text-secondary)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
-              }}
-            >
-              GPU Selection
-            </h3>
-
+            <h3 style={sectionTitleStyle}>GPU Selection</h3>
             <select
               className="select"
               value={localSettings.gpu}
@@ -309,19 +166,7 @@ export function SettingsModal({
 
           {/* Timeout */}
           <section>
-            <h3
-              style={{
-                fontSize: '14px',
-                fontWeight: 600,
-                marginBottom: '12px',
-                color: 'var(--text-secondary)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
-              }}
-            >
-              Execution Timeout
-            </h3>
-
+            <h3 style={sectionTitleStyle}>Execution Timeout</h3>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <input
                 type="range"
@@ -334,28 +179,15 @@ export function SettingsModal({
                 }
                 style={{ flex: 1, accentColor: 'var(--accent)' }}
               />
-              <span
-                style={{
-                  minWidth: '60px',
-                  textAlign: 'right',
-                  color: 'var(--text-secondary)',
-                }}
-              >
+              <span style={{ minWidth: '60px', textAlign: 'right', color: 'var(--text-secondary)' }}>
                 {localSettings.timeout}s
               </span>
             </div>
-            <p
-              style={{
-                fontSize: '12px',
-                color: 'var(--text-muted)',
-                marginTop: '8px',
-              }}
-            >
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>
               Maximum execution time before the kernel is terminated (5-300 seconds)
             </p>
           </section>
 
-          {/* Save Button */}
           <button className="btn-primary" onClick={handleSave} style={{ marginTop: '8px' }}>
             Save Settings
           </button>
@@ -374,3 +206,19 @@ export function SettingsModal({
     </div>
   );
 }
+
+const sectionTitleStyle: React.CSSProperties = {
+  fontSize: '14px',
+  fontWeight: 600,
+  marginBottom: '12px',
+  color: 'var(--text-secondary)',
+  textTransform: 'uppercase',
+  letterSpacing: '0.5px',
+};
+
+const codeStyle: React.CSSProperties = {
+  background: 'var(--bg-tertiary)',
+  padding: '2px 6px',
+  borderRadius: '4px',
+  fontSize: '12px',
+};

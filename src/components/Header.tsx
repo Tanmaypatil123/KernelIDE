@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Settings, Cpu, Play, Loader2, Link, CheckCircle, AlertCircle, ChevronDown } from 'lucide-react';
+import { Settings, Cpu, Play, Loader2, Link, CheckCircle, AlertCircle, ChevronDown, Wifi, WifiOff } from 'lucide-react';
 import type { Language, GPUType } from '../types';
 import { LANGUAGE_OPTIONS, GPU_OPTIONS } from '../types';
 
@@ -14,7 +14,7 @@ interface HeaderProps {
   onGpuChange: (gpu: GPUType) => void;
   endpoint: string | null;
   onEndpointChange: (endpoint: string) => void;
-  deploymentStatus: 'idle' | 'checking' | 'deploying' | 'deployed' | 'error';
+  connectionStatus: 'disconnected' | 'checking' | 'connected';
 }
 
 export function Header({
@@ -28,7 +28,7 @@ export function Header({
   onGpuChange,
   endpoint,
   onEndpointChange,
-  deploymentStatus,
+  connectionStatus,
 }: HeaderProps) {
   const [showEndpointInput, setShowEndpointInput] = useState(false);
   const [tempEndpoint, setTempEndpoint] = useState(endpoint || '');
@@ -36,6 +36,12 @@ export function Header({
   const handleEndpointSave = () => {
     onEndpointChange(tempEndpoint);
     setShowEndpointInput(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleEndpointSave();
+    }
   };
 
   return (
@@ -53,8 +59,8 @@ export function Header({
       {/* Left section - Logo and Language */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div 
-            style={{ 
+          <div
+            style={{
               background: 'var(--gradient-accent)',
               borderRadius: '10px',
               padding: '8px',
@@ -87,29 +93,26 @@ export function Header({
         </select>
       </div>
 
-      {/* Center section - GPU and Endpoint */}
+      {/* Center section - GPU and Connection */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        {/* GPU Selection */}
-        <div style={{ position: 'relative' }}>
-          <select
-            className="select"
-            value={gpu}
-            onChange={(e) => onGpuChange(e.target.value as GPUType)}
-            style={{ 
-              minWidth: '180px',
-              background: 'var(--bg-tertiary)',
-              paddingRight: '40px',
-            }}
-          >
-            {GPU_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label} ({opt.vram})
-              </option>
-            ))}
-          </select>
-        </div>
+        <select
+          className="select"
+          value={gpu}
+          onChange={(e) => onGpuChange(e.target.value as GPUType)}
+          style={{
+            minWidth: '180px',
+            background: 'var(--bg-tertiary)',
+            paddingRight: '40px',
+          }}
+        >
+          {GPU_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label} ({opt.vram})
+            </option>
+          ))}
+        </select>
 
-        {/* Endpoint Status */}
+        {/* Connection Status Button */}
         <div style={{ position: 'relative' }}>
           <button
             className="btn-secondary"
@@ -124,13 +127,14 @@ export function Header({
               padding: '8px 14px',
             }}
           >
-            <Link size={14} />
-            <span style={{ maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {endpoint ? 'Connected' : 'Set Endpoint'}
+            {connectionStatus === 'connected' ? <Wifi size={14} /> : <WifiOff size={14} />}
+            <span>
+              {connectionStatus === 'checking' ? 'Verifying...' :
+               connectionStatus === 'connected' ? 'Connected' : 'Not Connected'}
             </span>
-            {deploymentStatus === 'deployed' && <CheckCircle size={14} color="var(--success)" />}
-            {deploymentStatus === 'error' && <AlertCircle size={14} color="var(--error)" />}
-            {deploymentStatus === 'idle' && !endpoint && <AlertCircle size={14} color="var(--warning)" />}
+            {connectionStatus === 'connected' && <CheckCircle size={14} color="var(--success)" />}
+            {connectionStatus === 'disconnected' && <AlertCircle size={14} color={endpoint ? "var(--error)" : "var(--warning)"} />}
+            {connectionStatus === 'checking' && <Loader2 size={14} className="spin" />}
             <ChevronDown size={14} />
           </button>
 
@@ -147,7 +151,7 @@ export function Header({
                 border: '1px solid var(--border-color)',
                 borderRadius: '12px',
                 padding: '16px',
-                width: '400px',
+                width: '440px',
                 zIndex: 100,
                 boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
               }}
@@ -162,14 +166,16 @@ export function Header({
                   placeholder="https://your-workspace--kernelide-executor-api.modal.run"
                   value={tempEndpoint}
                   onChange={(e) => setTempEndpoint(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  autoFocus
                   style={{ flex: 1, fontSize: '13px' }}
                 />
                 <button className="btn-primary" onClick={handleEndpointSave} style={{ padding: '8px 16px' }}>
-                  Save
+                  Connect
                 </button>
               </div>
               <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
-                Deploy with: <code style={{ background: 'var(--bg-tertiary)', padding: '2px 6px', borderRadius: '4px' }}>modal deploy modal_executor.py</code>
+                Paste your endpoint URL after running: <code style={{ background: 'var(--bg-tertiary)', padding: '2px 6px', borderRadius: '4px' }}>modal deploy modal_executor.py</code>
               </p>
             </div>
           )}

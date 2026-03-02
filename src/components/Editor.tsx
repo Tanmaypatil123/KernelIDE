@@ -16,6 +16,7 @@ const languageMap: Record<Language, string> = {
   mojo: 'python',
   cutlass: 'cpp',
   cutedsl: 'python',
+  cutile: 'python',
 };
 
 export function Editor({ language, code, onChange }: EditorProps) {
@@ -241,6 +242,16 @@ export function Editor({ language, code, onChange }: EditorProps) {
       { label: 'grid config', kind: monaco.languages.CompletionItemKind.Snippet, insertText: 'grid = (triton.cdiv(M, BLOCK_M), triton.cdiv(N, BLOCK_N))', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, detail: 'CUTE-style grid configuration' },
       
       // GEMM kernel template
+      // cuTile completions
+      { label: 'ct.kernel', kind: monaco.languages.CompletionItemKind.Snippet, insertText: '@ct.kernel\ndef ${1:kernel_name}(${2:args}):\n    block_id = ct.bid(0)\n    ${3:pass}', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, detail: 'cuTile kernel decorator' },
+      { label: 'ct.bid', kind: monaco.languages.CompletionItemKind.Function, insertText: 'ct.bid(${1:0})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, detail: 'Get block ID in dimension n' },
+      { label: 'ct.load', kind: monaco.languages.CompletionItemKind.Function, insertText: 'ct.load(${1:tensor}, index=(${2:block_id},), shape=(${3:BLOCK_SIZE},))', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, detail: 'Load data tile from GPU memory' },
+      { label: 'ct.store', kind: monaco.languages.CompletionItemKind.Function, insertText: 'ct.store(${1:tensor}, index=(${2:block_id},), tile=${3:result_tile})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, detail: 'Store computed tile to GPU memory' },
+      { label: 'ct.launch', kind: monaco.languages.CompletionItemKind.Function, insertText: 'ct.launch(${1:kernel}, grid=(${2:num_blocks},))(${3:args})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, detail: 'Launch cuTile kernel on GPU' },
+      { label: 'ct.cdiv', kind: monaco.languages.CompletionItemKind.Function, insertText: 'ct.cdiv(${1:x}, ${2:y})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, detail: 'Ceiling division utility' },
+      { label: 'ct.constexpr', kind: monaco.languages.CompletionItemKind.TypeParameter, insertText: 'ct.constexpr', detail: 'Compile-time constant type' },
+      { label: 'import cuda.tile as ct', kind: monaco.languages.CompletionItemKind.Snippet, insertText: 'import cuda.tile as ct\nimport cupy', detail: 'Import cuTile and CuPy' },
+
       { label: 'cute gemm kernel', kind: monaco.languages.CompletionItemKind.Snippet, insertText: `@triton.jit
 def cute_gemm_kernel(
     a_ptr, b_ptr, c_ptr,
