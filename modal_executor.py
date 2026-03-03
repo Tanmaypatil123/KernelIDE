@@ -25,7 +25,7 @@ cuda_image = (
     modal.Image.from_registry("nvidia/cuda:12.9.0-devel-ubuntu24.04", add_python="3.12")
     .apt_install("build-essential", "git", "wget", "cmake", "ninja-build")
     .pip_install(
-        "torch>=2.5.0",
+        "torch",
         "triton>=3.1.0",
         "numpy>=2.0.0",
         "pydantic>=2.0.0",
@@ -38,7 +38,10 @@ cuda_image = (
 cutlass_image = (
     cuda_image
     .run_commands(
-        "git clone --depth 1 --branch v3.7.0 https://github.com/NVIDIA/cutlass.git /opt/cutlass",
+        "git clone --depth 1 --branch v4.4.1 https://github.com/NVIDIA/cutlass.git /opt/cutlass",
+    )
+    .pip_install(
+        "torch",
     )
     .env({"CUTLASS_PATH": "/opt/cutlass"})
 )
@@ -49,9 +52,10 @@ cutile_image = (
     .apt_install("build-essential", "git", "wget", "cmake", "ninja-build")
     .pip_install(
         "cuda-tile",
-        "cupy-cuda12x",
+        "cupy-cuda13x",
         "numpy>=2.0.0",
         "pydantic>=2.0.0",
+        "torch",
     )
 )
 
