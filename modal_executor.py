@@ -46,12 +46,14 @@ cutlass_image = (
     .env({"CUTLASS_PATH": "/opt/cutlass"})
 )
 
-# Image with cuTile (cuda-tile) for tile-based GPU programming
+# Image with cuTile v1.2+ for tile-based GPU programming
+# Supports Ampere, Ada, and Blackwell GPUs as of CUDA 13.2 / cuda-tile 1.2.0
+# Using cuda-tile[tileiras] bundles the compiler so no separate CUDA Toolkit needed
 cutile_image = (
-    modal.Image.from_registry("nvidia/cuda:13.1.0-devel-ubuntu24.04", add_python="3.12")
+    modal.Image.from_registry("nvidia/cuda:13.2.0-devel-ubuntu24.04", add_python="3.12")
     .apt_install("build-essential", "git", "wget", "cmake", "ninja-build")
     .pip_install(
-        "cuda-tile",
+        "cuda-tile[tileiras]",
         "cupy-cuda13x",
         "numpy>=2.0.0",
         "pydantic>=2.0.0",
@@ -433,6 +435,36 @@ def _execute_mojo(code: str, timeout_seconds: int = 30):
 
 @app.function(
     image=cutile_image,
+    gpu="T4",
+    timeout=300,
+    memory=8192,
+)
+def execute_cutile_t4(code: str, timeout_seconds: int = 30):
+    return _execute_cutile(code, timeout_seconds)
+
+
+@app.function(
+    image=cutile_image,
+    gpu="A100",
+    timeout=300,
+    memory=16384,
+)
+def execute_cutile_a100(code: str, timeout_seconds: int = 30):
+    return _execute_cutile(code, timeout_seconds)
+
+
+@app.function(
+    image=cutile_image,
+    gpu="H100",
+    timeout=300,
+    memory=32768,
+)
+def execute_cutile_h100(code: str, timeout_seconds: int = 30):
+    return _execute_cutile(code, timeout_seconds)
+
+
+@app.function(
+    image=cutile_image,
     gpu="B200",
     timeout=300,
     memory=65536,
@@ -543,9 +575,9 @@ def create_web_app():
             ("mojo", "a100"): execute_mojo_a100,
             ("mojo", "h100"): execute_mojo_h100,
             ("mojo", "b200"): execute_mojo_b200,
-            ("cutile", "t4"): execute_cutile_b200,  # cuTile requires Blackwell GPU (B200)
-            ("cutile", "a100"): execute_cutile_b200,
-            ("cutile", "h100"): execute_cutile_b200,
+            ("cutile", "t4"): execute_cutile_t4,
+            ("cutile", "a100"): execute_cutile_a100,
+            ("cutile", "h100"): execute_cutile_h100,
             ("cutile", "b200"): execute_cutile_b200,
         }
         

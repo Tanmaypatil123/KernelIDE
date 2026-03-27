@@ -5,12 +5,13 @@ A browser-based IDE for practicing GPU kernel development with serverless execut
 ## Features
 
 - **Monaco Editor** - VS Code-like editing experience with syntax highlighting and autocompletion
-- **Multiple Languages** - CUDA C++, Triton (Python), CUTLASS C++, CUTE DSL (Python), Mojo
+- **Multiple Languages** - CUDA C++, Triton (Python), CUTLASS C++, CUTE DSL (Python), Mojo, cuTile
 - **GPU Selection** - Choose from T4, L4, A10, A100, L40S, H100, H200, B200
 - **Configurable Timeout** - Set execution limits (5-300 seconds)
 - **Serverless Execution** - No idle charges, pay only for kernel runtime
 - **Self-Hostable** - Bring your own Modal API key
 - **VSCode Extension** - Use KernelIDE directly within Visual Studio Code
+- **CLI Tool** - Submit kernels directly from your terminal
 
 ## Quick Start
 
@@ -97,6 +98,49 @@ code --install-extension kernelide-0.1.0.vsix
 
 After installation, restart VS Code and follow the setup instructions in the [VSCode Extension README](kernelide-vscode/README.md) for complete installation and usage details.
 
+### CLI
+
+The KernelIDE CLI lets you submit kernel files directly from your terminal.
+
+**Installation:**
+
+```bash
+cd kernelide-cli
+pip install .
+```
+
+**Setup:**
+
+```bash
+kernelide setup
+```
+
+This will prompt you for your Modal endpoint URL, default GPU, and timeout. Configuration is saved to `~/.kernelide/config.json`.
+
+**Submit a kernel:**
+
+```bash
+# Auto-detect language from file extension
+kernelide submit kernel.cu
+
+# Specify GPU and timeout
+kernelide submit kernel.cu --gpu H100 --timeout 60
+
+# Override language (useful for .py files that could be triton, cutedsl, or cutile)
+kernelide submit kernel.py --language cutedsl
+
+# One-off endpoint override
+kernelide submit kernel.cu --endpoint https://your-workspace--kernelide-executor-api.modal.run
+```
+
+**Other commands:**
+
+```bash
+kernelide languages   # List all supported languages/DSLs
+kernelide gpus        # List all supported GPU types
+kernelide config      # Show current configuration
+```
+
 ## Supported Languages
 
 | Language | File Type | Description |
@@ -106,6 +150,7 @@ After installation, restart VS Code and follow the setup instructions in the [VS
 | CUTLASS C++ | `.cu` | NVIDIA CUTLASS templates |
 | CUTE DSL | `.py` | nvidia-cutlass-dsl Python package |
 | Mojo | `.mojo` | Modular's Mojo language |
+| cuTile | `.py` | NVIDIA cuTile tile-based GPU programming |
 
 ## GPU Pricing (Modal.com)
 
