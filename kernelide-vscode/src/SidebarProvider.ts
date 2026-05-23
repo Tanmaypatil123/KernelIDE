@@ -340,6 +340,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             <option value="cutlass">CUTLASS</option>
             <option value="cutedsl">CUTE DSL</option>
             <option value="cutile">cuTile (Python)</option>
+            <option value="tilelang">TileLang (Python)</option>
             <option value="mojo">Mojo</option>
         </select>
 

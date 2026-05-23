@@ -1,4 +1,4 @@
-export type Language = 'cuda' | 'triton' | 'mojo' | 'cutlass' | 'cutedsl' | 'cutile';
+export type Language = 'cuda' | 'triton' | 'mojo' | 'cutlass' | 'cutedsl' | 'cutile' | 'tilelang';
 
 export type GPUType = 'T4' | 'L4' | 'A10' | 'A100-40GB' | 'A100-80GB' | 'L40S' | 'H100' | 'H200' | 'B200';
 
@@ -44,4 +44,5 @@ export const LANGUAGE_OPTIONS: { value: Language; label: string; extension: stri
   { value: 'cutedsl', label: 'CUTE DSL (Python)', extension: '.py' },
   { value: 'mojo', label: 'Mojo', extension: '.mojo' },
   { value: 'cutile', label: 'cuTile (Python)', extension: '.py' },
+  { value: 'tilelang', label: 'TileLang (Python)', extension: '.py' },
 ];

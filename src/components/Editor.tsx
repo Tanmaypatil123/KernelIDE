@@ -17,6 +17,7 @@ const languageMap: Record<Language, string> = {
   cutlass: 'cpp',
   cutedsl: 'python',
   cutile: 'python',
+  tilelang: 'python',
 };
 
 export function Editor({ language, code, onChange }: EditorProps) {
@@ -280,6 +281,96 @@ def cute_gemm_kernel(
     tl.store(c_ptrs, acc)`, insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, detail: 'Full CUTE-style GEMM kernel template' },
     ];
 
+    const tilelangCompletions = [
+      // Imports
+      { label: 'import tilelang', kind: monaco.languages.CompletionItemKind.Snippet, insertText: 'import tilelang\nimport tilelang.language as T', detail: 'Import TileLang and T namespace' },
+      { label: 'import tilelang (full)', kind: monaco.languages.CompletionItemKind.Snippet, insertText: 'import tilelang\nimport tilelang.language as T\nimport torch', detail: 'Full TileLang import with torch' },
+
+      // JIT decorator
+      { label: '@tilelang.jit', kind: monaco.languages.CompletionItemKind.Snippet, insertText: '@tilelang.jit\ndef ${1:kernel_name}(${2:A}, ${3:B}, block_M, block_N, block_K, dtype=T.float16, accum_dtype=T.float32):\n    M, N, K = T.const("M, N, K")\n    ${2:A}: T.Tensor((M, K), dtype)\n    ${3:B}: T.Tensor((K, N), dtype)\n    C = T.empty((M, N), dtype)\n    ${4:# kernel body}\n    return C', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, detail: 'TileLang JIT kernel decorator with tensor annotations' },
+
+      // Shape constants
+      { label: 'T.const', kind: monaco.languages.CompletionItemKind.Function, insertText: '${1:M}, ${2:N}, ${3:K} = T.const("${1:M}, ${2:N}, ${3:K}")', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, detail: 'Declare symbolic shape constants from tensor inputs' },
+
+      // Tensor annotation (inside jit function body)
+      { label: 'T.Tensor', kind: monaco.languages.CompletionItemKind.TypeParameter, insertText: 'T.Tensor((${1:M}, ${2:K}), ${3:dtype})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, detail: 'Tensor shape+dtype annotation (used inside @tilelang.jit body)' },
+
+      // Output allocation
+      { label: 'T.empty', kind: monaco.languages.CompletionItemKind.Function, insertText: 'T.empty((${1:M}, ${2:N}), ${3:dtype})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, detail: 'Allocate output tensor (returned from kernel)' },
+
+      // Kernel launch config
+      { label: 'T.Kernel', kind: monaco.languages.CompletionItemKind.Snippet, insertText: 'with T.Kernel(T.ceildiv(${1:N}, block_N), T.ceildiv(${2:M}, block_M), threads=${3:128}) as (bx, by):', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, detail: 'Kernel launch config — grid(x=N/block_N, y=M/block_M), threads per block' },
+      { label: 'T.ceildiv', kind: monaco.languages.CompletionItemKind.Function, insertText: 'T.ceildiv(${1:N}, ${2:block_N})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, detail: 'Ceiling division (for grid size)' },
+
+      // Memory allocation
+      { label: 'T.alloc_shared', kind: monaco.languages.CompletionItemKind.Function, insertText: 'T.alloc_shared((${1:block_M}, ${2:block_K}), ${3:dtype})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, detail: 'Allocate shared memory tile' },
+      { label: 'T.alloc_fragment', kind: monaco.languages.CompletionItemKind.Function, insertText: 'T.alloc_fragment((${1:block_M}, ${2:block_N}), ${3:accum_dtype})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, detail: 'Allocate register-level accumulator fragment' },
+
+      // Pipeline loop
+      { label: 'T.Pipelined', kind: monaco.languages.CompletionItemKind.Snippet, insertText: 'for ${1:k} in T.Pipelined(T.ceildiv(${2:K}, block_K), num_stages=${3:3}):\n    ${4:pass}', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, detail: 'Software-pipelined K-loop (overlaps memory and compute)' },
+
+      // Data movement — offset-based (correct TileLang API)
+      { label: 'T.copy (load)', kind: monaco.languages.CompletionItemKind.Function, insertText: 'T.copy(${1:A}[by * block_M, ${2:k} * block_K], ${3:A_shared})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, detail: 'Load tile from global memory into shared (offset-based, not slice)' },
+      { label: 'T.copy (store)', kind: monaco.languages.CompletionItemKind.Function, insertText: 'T.copy(${1:C_local}, ${2:C}[by * block_M, bx * block_N])', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, detail: 'Write fragment back to global memory output tile' },
+      { label: 'T.gemm', kind: monaco.languages.CompletionItemKind.Function, insertText: 'T.gemm(${1:A_shared}, ${2:B_shared}, ${3:C_local})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, detail: 'Tile-level matrix multiply-accumulate into fragment' },
+      { label: 'T.clear', kind: monaco.languages.CompletionItemKind.Function, insertText: 'T.clear(${1:C_local})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, detail: 'Zero-initialize accumulator fragment before K-loop' },
+
+      // Optimization
+      { label: 'T.use_swizzle', kind: monaco.languages.CompletionItemKind.Function, insertText: 'T.use_swizzle(${1:10})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, detail: 'Enable L2 cache swizzle for better memory locality' },
+
+      // Dtypes
+      { label: 'T.float16', kind: monaco.languages.CompletionItemKind.TypeParameter, insertText: 'T.float16', detail: 'float16 dtype' },
+      { label: 'T.float32', kind: monaco.languages.CompletionItemKind.TypeParameter, insertText: 'T.float32', detail: 'float32 dtype' },
+      { label: 'T.bfloat16', kind: monaco.languages.CompletionItemKind.TypeParameter, insertText: 'T.bfloat16', detail: 'bfloat16 dtype' },
+      { label: 'T.int8', kind: monaco.languages.CompletionItemKind.TypeParameter, insertText: 'T.int8', detail: 'int8 dtype' },
+
+      // Compile call
+      { label: 'kernel.compile', kind: monaco.languages.CompletionItemKind.Function, insertText: '${1:matmul}.compile(M=${2:M}, N=${3:N}, K=${4:K}, block_M=${5:block_M}, block_N=${6:block_N}, block_K=${7:block_K})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, detail: 'Compile JIT kernel with concrete dimensions' },
+
+      // Full GEMM kernel template (exact working pattern)
+      { label: 'tilelang gemm kernel', kind: monaco.languages.CompletionItemKind.Snippet, insertText: `import tilelang
+import tilelang.language as T
+import torch
+
+@tilelang.jit
+def matmul(A, B, block_M, block_N, block_K, dtype=T.float16, accum_dtype=T.float32):
+    M, N, K = T.const("M, N, K")
+
+    A: T.Tensor((M, K), dtype)
+    B: T.Tensor((K, N), dtype)
+    C = T.empty((M, N), dtype)
+
+    with T.Kernel(T.ceildiv(N, block_N), T.ceildiv(M, block_M), threads=128) as (bx, by):
+        A_shared = T.alloc_shared((block_M, block_K), dtype)
+        B_shared = T.alloc_shared((block_K, block_N), dtype)
+        C_local  = T.alloc_fragment((block_M, block_N), accum_dtype)
+
+        T.clear(C_local)
+        for k in T.Pipelined(T.ceildiv(K, block_K), num_stages=3):
+            T.copy(A[by * block_M, k * block_K], A_shared)
+            T.copy(B[k * block_K, bx * block_N], B_shared)
+            T.gemm(A_shared, B_shared, C_local)
+
+        T.copy(C_local, C[by * block_M, bx * block_N])
+
+    return C
+
+M, N, K = 1024, 1024, 1024
+block_M, block_N, block_K = 128, 128, 32
+
+kernel = matmul.compile(M=M, N=N, K=K, block_M=block_M, block_N=block_N, block_K=block_K)
+
+a = torch.randn(M, K, device="cuda", dtype=torch.float16)
+b = torch.randn(K, N, device="cuda", dtype=torch.float16)
+c = kernel(a, b)
+
+ref = a @ b
+print("Output shape:", c.shape)
+print("Max diff:", (c.float() - ref.float()).abs().max().item())
+torch.testing.assert_close(c, ref, rtol=1e-2, atol=1e-2)
+print("PASSED")`, insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, detail: 'Full working TileLang GEMM kernel (tested on B200)' },
+    ];
+
     const cutlassCompletions = [
       // CUTLASS includes
       { label: '#include <cutlass/cutlass.h>', kind: monaco.languages.CompletionItemKind.Snippet, insertText: '#include <cutlass/cutlass.h>', detail: 'CUTLASS main header' },
@@ -336,7 +427,7 @@ def cute_gemm_kernel(
           endColumn: word.endColumn,
         };
         
-        const suggestions = [...tritonCompletions, ...cuteDslCompletions].map(item => ({
+        const suggestions = [...tritonCompletions, ...cuteDslCompletions, ...tilelangCompletions].map(item => ({
           ...item,
           range,
         }));

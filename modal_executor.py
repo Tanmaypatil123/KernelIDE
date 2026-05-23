@@ -26,7 +26,7 @@ cuda_image = (
     .apt_install("build-essential", "git", "wget", "cmake", "ninja-build")
     .pip_install(
         "torch",
-        "triton>=3.1.0",
+        "triton==3.6.0",
         "numpy>=2.0.0",
         "pydantic>=2.0.0",
         "cuda-python==12.9.0",
@@ -58,6 +58,18 @@ cutile_image = (
         "numpy>=2.0.0",
         "pydantic>=2.0.0",
         "torch",
+    )
+)
+
+# Image with TileLang (TVM-based tile DSL for GPU kernels)
+tilelang_image = (
+    modal.Image.from_registry("nvidia/cuda:12.9.0-devel-ubuntu24.04", add_python="3.12")
+    .apt_install("build-essential", "git", "wget", "cmake", "ninja-build", "llvm-dev", "libzstd-dev")
+    .pip_install(
+        "tilelang",
+        "torch",
+        "numpy>=2.0.0",
+        "pydantic>=2.0.0",
     )
 )
 
@@ -506,6 +518,79 @@ def _execute_cutile(code: str, timeout_seconds: int = 30):
             }
 
 
+@app.function(
+    image=tilelang_image,
+    gpu="T4",
+    timeout=300,
+    memory=8192,
+)
+def execute_tilelang_t4(code: str, timeout_seconds: int = 30):
+    return _execute_tilelang(code, timeout_seconds)
+
+
+@app.function(
+    image=tilelang_image,
+    gpu="A100",
+    timeout=300,
+    memory=16384,
+)
+def execute_tilelang_a100(code: str, timeout_seconds: int = 30):
+    return _execute_tilelang(code, timeout_seconds)
+
+
+@app.function(
+    image=tilelang_image,
+    gpu="H100",
+    timeout=300,
+    memory=32768,
+)
+def execute_tilelang_h100(code: str, timeout_seconds: int = 30):
+    return _execute_tilelang(code, timeout_seconds)
+
+
+@app.function(
+    image=tilelang_image,
+    gpu="B200",
+    timeout=300,
+    memory=65536,
+)
+def execute_tilelang_b200(code: str, timeout_seconds: int = 30):
+    return _execute_tilelang(code, timeout_seconds)
+
+
+def _execute_tilelang(code: str, timeout_seconds: int = 30):
+    """Execute TileLang Python code."""
+    start_time = time.time()
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        source_file = os.path.join(tmpdir, "kernel.py")
+
+        with open(source_file, "w") as f:
+            f.write(code)
+
+        try:
+            result = subprocess.run(
+                [sys.executable, source_file],
+                capture_output=True,
+                text=True,
+                timeout=timeout_seconds,
+                cwd=tmpdir,
+            )
+            return {
+                "success": result.returncode == 0,
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "execution_time": time.time() - start_time,
+            }
+        except subprocess.TimeoutExpired:
+            return {
+                "success": False,
+                "stdout": "",
+                "stderr": f"Execution timed out after {timeout_seconds} seconds",
+                "execution_time": timeout_seconds,
+            }
+
+
 def create_web_app():
     """Create FastAPI web app - imported lazily to avoid import on GPU workers."""
     from fastapi import FastAPI, HTTPException
@@ -579,6 +664,10 @@ def create_web_app():
             ("cutile", "a100"): execute_cutile_a100,
             ("cutile", "h100"): execute_cutile_h100,
             ("cutile", "b200"): execute_cutile_b200,
+            ("tilelang", "t4"): execute_tilelang_t4,
+            ("tilelang", "a100"): execute_tilelang_a100,
+            ("tilelang", "h100"): execute_tilelang_h100,
+            ("tilelang", "b200"): execute_tilelang_b200,
         }
         
         executor = executors.get((lang, gpu_tier))
@@ -622,7 +711,7 @@ def create_web_app():
                 "/execute": "POST - Execute GPU code",
                 "/health": "GET - Health check",
             },
-            "supported_languages": ["cuda", "triton", "cutlass", "cutedsl", "mojo", "cutile"],
+            "supported_languages": ["cuda", "triton", "cutlass", "cutedsl", "mojo", "cutile", "tilelang"],
             "supported_gpus": ["T4", "L4", "A10", "A100-40GB", "A100-80GB", "L40S", "H100", "H200", "B200"],
         }
 

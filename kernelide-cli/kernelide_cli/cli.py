@@ -23,7 +23,7 @@ SUPPORTED_GPUS = [
     "T4", "L4", "A10", "A100-40GB", "A100-80GB", "L40S", "H100", "H200", "B200",
 ]
 
-SUPPORTED_LANGUAGES = ["cuda", "triton", "cutlass", "cutedsl", "mojo", "cutile"]
+SUPPORTED_LANGUAGES = ["cuda", "triton", "cutlass", "cutedsl", "mojo", "cutile", "tilelang"]
 
 LANGUAGE_INFO = {
     "cuda":    {"name": "CUDA C++",    "ext": ".cu",   "desc": "NVIDIA CUDA C++ kernels compiled with nvcc"},
@@ -32,6 +32,7 @@ LANGUAGE_INFO = {
     "cutedsl": {"name": "CUTE DSL",    "ext": ".py",   "desc": "CuTe layout DSL for tensor core programming"},
     "mojo":    {"name": "Mojo",        "ext": ".mojo", "desc": "Modular Mojo language for GPU/AI workloads"},
     "cutile":  {"name": "cuTile",      "ext": ".py",   "desc": "NVIDIA cuTile tile-based GPU programming"},
+    "tilelang": {"name": "TileLang",   "ext": ".py",   "desc": "TVM-based tile DSL for high-performance GPU kernels"},
 }
 
 EXTENSION_MAP = {
