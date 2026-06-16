@@ -26,7 +26,7 @@ cuda_image = (
     .apt_install("build-essential", "git", "wget", "cmake", "ninja-build")
     .pip_install(
         "torch",
-        "triton==3.6.0",
+        "triton==3.7.0",
         "numpy>=2.0.0",
         "pydantic>=2.0.0",
         "cuda-python==12.9.0",
