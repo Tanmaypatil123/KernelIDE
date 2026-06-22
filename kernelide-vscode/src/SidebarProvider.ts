@@ -328,6 +328,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             <option value="A100-40GB">A100 40GB</option>
             <option value="A100-80GB">A100 80GB</option>
             <option value="L40S">L40S</option>
+            <option value="RTX-PRO-6000">RTX PRO 6000 Blackwell</option>
             <option value="H100">H100</option>
             <option value="H200">H200</option>
             <option value="B200">B200 (Premium)</option>

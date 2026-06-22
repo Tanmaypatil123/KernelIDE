@@ -25,11 +25,11 @@ cuda_image = (
     modal.Image.from_registry("nvidia/cuda:12.9.0-devel-ubuntu24.04", add_python="3.12")
     .apt_install("build-essential", "git", "wget", "cmake", "ninja-build")
     .pip_install(
-        "torch",
+        "torch==2.12.0",
         "triton==3.7.0",
         "numpy>=2.0.0",
         "pydantic>=2.0.0",
-        "cuda-python==12.9.0",
+        "cuda-python==13.0.0",
         "nvidia-cutlass-dsl",
     )
 )
@@ -99,6 +99,9 @@ def get_gpu_config(gpu_type: str):
         "A100-40GB": "A100",
         "A100-80GB": "A100-80GB",
         "L40S": "L40S",
+        "RTX-PRO-6000": "RTX-PRO-6000",
+        "RTX PRO 6000": "RTX-PRO-6000",
+        "RTX PRO 6000 BLACKWELL": "RTX-PRO-6000",
         "H100": "H100",
         "H200": "H200",
         "B200": "B200",
@@ -143,6 +146,16 @@ def execute_cuda_h100(code: str, timeout_seconds: int = 30):
     memory=65536,
 )
 def execute_cuda_b200(code: str, timeout_seconds: int = 30):
+    return _execute_cuda(code, timeout_seconds)
+
+
+@app.function(
+    image=cuda_image,
+    gpu="RTX-PRO-6000",
+    timeout=300,
+    memory=65536,
+)
+def execute_cuda_rtx_pro_6000(code: str, timeout_seconds: int = 30):
     return _execute_cuda(code, timeout_seconds)
 
 
@@ -236,6 +249,16 @@ def execute_triton_b200(code: str, timeout_seconds: int = 30):
     return _execute_triton(code, timeout_seconds)
 
 
+@app.function(
+    image=cuda_image,
+    gpu="RTX-PRO-6000",
+    timeout=300,
+    memory=65536,
+)
+def execute_triton_rtx_pro_6000(code: str, timeout_seconds: int = 30):
+    return _execute_triton(code, timeout_seconds)
+
+
 def _execute_triton(code: str, timeout_seconds: int = 30):
     """Execute Triton Python code."""
     start_time = time.time()
@@ -307,6 +330,16 @@ def execute_cutlass_h100(code: str, timeout_seconds: int = 30):
     memory=65536,
 )
 def execute_cutlass_b200(code: str, timeout_seconds: int = 30):
+    return _execute_cutlass(code, timeout_seconds)
+
+
+@app.function(
+    image=cutlass_image,
+    gpu="RTX-PRO-6000",
+    timeout=300,
+    memory=65536,
+)
+def execute_cutlass_rtx_pro_6000(code: str, timeout_seconds: int = 30):
     return _execute_cutlass(code, timeout_seconds)
 
 
@@ -411,6 +444,16 @@ def execute_mojo_b200(code: str, timeout_seconds: int = 30):
     return _execute_mojo(code, timeout_seconds)
 
 
+@app.function(
+    image=mojo_image,
+    gpu="RTX-PRO-6000",
+    timeout=300,
+    memory=65536,
+)
+def execute_mojo_rtx_pro_6000(code: str, timeout_seconds: int = 30):
+    return _execute_mojo(code, timeout_seconds)
+
+
 def _execute_mojo(code: str, timeout_seconds: int = 30):
     """Execute Mojo code."""
     start_time = time.time()
@@ -482,6 +525,16 @@ def execute_cutile_h100(code: str, timeout_seconds: int = 30):
     memory=65536,
 )
 def execute_cutile_b200(code: str, timeout_seconds: int = 30):
+    return _execute_cutile(code, timeout_seconds)
+
+
+@app.function(
+    image=cutile_image,
+    gpu="RTX-PRO-6000",
+    timeout=300,
+    memory=65536,
+)
+def execute_cutile_rtx_pro_6000(code: str, timeout_seconds: int = 30):
     return _execute_cutile(code, timeout_seconds)
 
 
@@ -558,6 +611,16 @@ def execute_tilelang_b200(code: str, timeout_seconds: int = 30):
     return _execute_tilelang(code, timeout_seconds)
 
 
+@app.function(
+    image=tilelang_image,
+    gpu="RTX-PRO-6000",
+    timeout=300,
+    memory=65536,
+)
+def execute_tilelang_rtx_pro_6000(code: str, timeout_seconds: int = 30):
+    return _execute_tilelang(code, timeout_seconds)
+
+
 def _execute_tilelang(code: str, timeout_seconds: int = 30):
     """Execute TileLang Python code."""
     start_time = time.time()
@@ -629,11 +692,13 @@ def create_web_app():
         lang = request.language.lower()
         
         # Map to appropriate executor function
-        # We have T4, A100, H100, B200 variants for each language
+        # We have T4, A100, RTX PRO 6000, H100, B200 variants for each language
         # For other GPUs, fall back to closest match
         gpu_tier = "t4"  # default
         if gpu in ["A100-40GB", "A100-80GB", "A100", "A10", "L4", "L40S"]:
             gpu_tier = "a100"
+        elif gpu in ["RTX-PRO-6000", "RTX PRO 6000", "RTX PRO 6000 BLACKWELL"]:
+            gpu_tier = "rtx_pro_6000"
         elif gpu in ["H100", "H200"]:
             gpu_tier = "h100"
         elif gpu == "B200":
@@ -644,30 +709,37 @@ def create_web_app():
             ("cuda", "a100"): execute_cuda_a100,
             ("cuda", "h100"): execute_cuda_h100,
             ("cuda", "b200"): execute_cuda_b200,
+            ("cuda", "rtx_pro_6000"): execute_cuda_rtx_pro_6000,
             ("triton", "t4"): execute_triton_t4,
             ("triton", "a100"): execute_triton_a100,
             ("triton", "h100"): execute_triton_h100,
             ("triton", "b200"): execute_triton_b200,
+            ("triton", "rtx_pro_6000"): execute_triton_rtx_pro_6000,
             ("cutlass", "t4"): execute_cutlass_t4,
             ("cutlass", "a100"): execute_cutlass_a100,
             ("cutlass", "h100"): execute_cutlass_h100,
             ("cutlass", "b200"): execute_cutlass_b200,
+            ("cutlass", "rtx_pro_6000"): execute_cutlass_rtx_pro_6000,
             ("cutedsl", "t4"): execute_triton_t4,  # CUTE DSL uses Triton/Python
             ("cutedsl", "a100"): execute_triton_a100,
             ("cutedsl", "h100"): execute_triton_h100,
             ("cutedsl", "b200"): execute_triton_b200,
+            ("cutedsl", "rtx_pro_6000"): execute_triton_rtx_pro_6000,
             ("mojo", "t4"): execute_mojo_t4,
             ("mojo", "a100"): execute_mojo_a100,
             ("mojo", "h100"): execute_mojo_h100,
             ("mojo", "b200"): execute_mojo_b200,
+            ("mojo", "rtx_pro_6000"): execute_mojo_rtx_pro_6000,
             ("cutile", "t4"): execute_cutile_t4,
             ("cutile", "a100"): execute_cutile_a100,
             ("cutile", "h100"): execute_cutile_h100,
             ("cutile", "b200"): execute_cutile_b200,
+            ("cutile", "rtx_pro_6000"): execute_cutile_rtx_pro_6000,
             ("tilelang", "t4"): execute_tilelang_t4,
             ("tilelang", "a100"): execute_tilelang_a100,
             ("tilelang", "h100"): execute_tilelang_h100,
             ("tilelang", "b200"): execute_tilelang_b200,
+            ("tilelang", "rtx_pro_6000"): execute_tilelang_rtx_pro_6000,
         }
         
         executor = executors.get((lang, gpu_tier))
@@ -712,7 +784,7 @@ def create_web_app():
                 "/health": "GET - Health check",
             },
             "supported_languages": ["cuda", "triton", "cutlass", "cutedsl", "mojo", "cutile", "tilelang"],
-            "supported_gpus": ["T4", "L4", "A10", "A100-40GB", "A100-80GB", "L40S", "H100", "H200", "B200"],
+            "supported_gpus": ["T4", "L4", "A10", "A100-40GB", "A100-80GB", "L40S", "RTX-PRO-6000", "H100", "H200", "B200"],
         }
 
     return web_app

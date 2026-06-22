@@ -20,7 +20,7 @@ CONFIG_DIR = Path.home() / ".kernelide"
 CONFIG_FILE = CONFIG_DIR / "config.json"
 
 SUPPORTED_GPUS = [
-    "T4", "L4", "A10", "A100-40GB", "A100-80GB", "L40S", "H100", "H200", "B200",
+    "T4", "L4", "A10", "A100-40GB", "A100-80GB", "L40S", "RTX-PRO-6000", "H100", "H200", "B200",
 ]
 
 SUPPORTED_LANGUAGES = ["cuda", "triton", "cutlass", "cutedsl", "mojo", "cutile", "tilelang"]

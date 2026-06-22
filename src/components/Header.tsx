@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Settings, Cpu, Play, Loader2, Link, CheckCircle, AlertCircle, ChevronDown, Wifi, WifiOff } from 'lucide-react';
+import { Settings, Cpu, Play, Loader2, CheckCircle, AlertCircle, ChevronDown, Wifi, WifiOff } from 'lucide-react';
 import type { Language, GPUType } from '../types';
 import { LANGUAGE_OPTIONS, GPU_OPTIONS } from '../types';
 

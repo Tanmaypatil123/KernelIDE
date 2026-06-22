@@ -1,6 +1,6 @@
 export type Language = 'cuda' | 'triton' | 'mojo' | 'cutlass' | 'cutedsl' | 'cutile' | 'tilelang';
 
-export type GPUType = 'T4' | 'L4' | 'A10' | 'A100-40GB' | 'A100-80GB' | 'L40S' | 'H100' | 'H200' | 'B200';
+export type GPUType = 'T4' | 'L4' | 'A10' | 'A100-40GB' | 'A100-80GB' | 'L40S' | 'RTX-PRO-6000' | 'H100' | 'H200' | 'B200';
 
 export interface Settings {
   gpu: GPUType;
@@ -32,6 +32,7 @@ export const GPU_OPTIONS: { value: GPUType; label: string; vram: string; price: 
   { value: 'A100-40GB', label: 'NVIDIA A100 40GB', vram: '40 GB', price: '~$2.10/hr' },
   { value: 'A100-80GB', label: 'NVIDIA A100 80GB', vram: '80 GB', price: '~$2.50/hr' },
   { value: 'L40S', label: 'NVIDIA L40S', vram: '48 GB', price: '~$1.70/hr' },
+  { value: 'RTX-PRO-6000', label: 'NVIDIA RTX PRO 6000 Blackwell', vram: '96 GB', price: 'Modal current rate' },
   { value: 'H100', label: 'NVIDIA H100', vram: '80 GB', price: '~$3.95/hr' },
   { value: 'H200', label: 'NVIDIA H200', vram: '141 GB', price: '~$4.50/hr' },
   { value: 'B200', label: 'NVIDIA B200', vram: '192 GB', price: '~$5.50/hr' },

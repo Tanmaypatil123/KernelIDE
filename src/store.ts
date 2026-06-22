@@ -425,4 +425,27 @@ ct.launch(cupy.cuda.get_current_stream(), grid, vector_add_kernel, (a, b, result
 result_np = cupy.asnumpy(result)
 np.testing.assert_array_almost_equal(result_np, expected)
 `,
+
+  tilelang: `import tilelang as tl
+import tilelang.language as T
+import torch
+
+@tl.jit
+def add_kernel(a, b, c, n: T.int32):
+    pid = T.get_program_id(0)
+    offsets = pid * 256 + T.arange(0, 256)
+    mask = offsets < n
+    c[offsets] = T.where(mask, a[offsets] + b[offsets], 0.0)
+
+n = 1024
+a = torch.arange(n, device='cuda', dtype=torch.float32)
+b = torch.arange(n, device='cuda', dtype=torch.float32) * 2
+c = torch.empty_like(a)
+
+kernel = tl.compile(add_kernel, out_idx=[2], target='cuda')
+kernel(a, b, c, n, grid=(tl.cdiv(n, 256),))
+
+torch.testing.assert_close(c, a + b)
+print('TileLang vector addition PASSED')
+`,
 };
